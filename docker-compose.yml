@@ -1,0 +1,17 @@
+
+
+services:
+
+  osu_multi:
+    build: .
+    container_name: osu_multi
+    image: osu_multi
+    restart: unless-stopped
+
+    volumes:
+      - ./data/:/opt/osu_multi/data/
+
+      # - ./src/:/opt/osu_multi/src/ # for DEV
+
+    env_file:
+      - .env
