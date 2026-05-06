@@ -31,7 +31,7 @@ class DB:
             CREATE TABLE IF NOT EXISTS lobbies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp INTEGER DEFAULT (strftime('%s', 'now')),
-                data TEXT DEFAULT '[]'
+                data BLOB
             )
             """
         )
@@ -41,12 +41,13 @@ class DB:
         
     def add_lobby(self, lobby_data:list[dict]):
         try:
+            compressed_data = zlib.compress(json.dumps(lobby_data).encode("utf-8"), level=9)
             self.sql_cursor.execute(
                 """
                 INSERT INTO lobbies (data)
                 VALUES (?)
                 """, 
-                (json.dumps(lobby_data),)
+                (compressed_data,)
             )
             self.sql_connection.commit()
         except Exception as e:
