@@ -14,7 +14,7 @@ class DB:
 
         self.db_path = os.path.join(data_folder, "lobbies.db")
                 
-        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=True)
+        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.sql_cursor = self.sql_connection.cursor()
         
         self._init_sql()
