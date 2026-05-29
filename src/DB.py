@@ -14,7 +14,7 @@ class DB:
 
         self.db_path = os.path.join(data_folder, "lobbies.db")
                 
-        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=True)
         self.sql_cursor = self.sql_connection.cursor()
         
         self._init_sql()
@@ -53,3 +53,25 @@ class DB:
         except Exception as e:
             self.logger.error(f"Error while saving results to DB: {str(e)}", exc_info=True)
             self.sql_connection.rollback()
+            
+            
+    def get_latest_lobbies(self) -> dict:
+        try:
+            self.sql_cursor.execute(
+                """
+                SELECT timestamp, data FROM lobbies
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """
+            )
+            result = self.sql_cursor.fetchone()
+            if result:
+                timestamp = result[0]
+                compressed_data = result[1]
+                decompressed_data = zlib.decompress(compressed_data).decode("utf-8")
+                return {"timestamp": timestamp, "lobbies": json.loads(decompressed_data)}
+            else:
+                return None
+        except Exception as e:
+            self.logger.error(f"Error while fetching latest lobbies from DB: {str(e)}", exc_info=True)
+            return None

@@ -12,6 +12,8 @@ services:
       - ./data/:/opt/osu_multi/data/
 
       # - ./src/:/opt/osu_multi/src/ # for DEV
+    ports:
+      - 5001:5000
 
     env_file:
       - .env
