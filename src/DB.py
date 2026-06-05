@@ -133,7 +133,7 @@ class DB:
                 """
             )
             result = self.sql_cursor.fetchall()
-            return [{row[0]: json.loads(row[1])} for row in result]
+            return {row[0]: json.loads(row[1]) for row in result}
         except Exception as e:
             self.logger.error(f"Error while fetching players from DB: {str(e)}", exc_info=True)
             return []

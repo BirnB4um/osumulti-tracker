@@ -97,8 +97,7 @@ async def players():
         return JSONResponse(content={"message": "No data found"}, status_code=404)
     
     """
-    [
-        {
+    {
         "12345": {
             "id": "12345",
             "username": "Player1",
@@ -109,7 +108,7 @@ async def players():
             "username": "Player2",
             ...
         }
-    ]
+    }
     """
     
     return data
