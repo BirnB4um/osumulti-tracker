@@ -90,6 +90,45 @@ async def filter_latest_lobbies(request: Request):
     return data
 
 
+@app.get("/players")
+async def players():
+    data = db.get_players()
+    if data is None:
+        return JSONResponse(content={"message": "No data found"}, status_code=404)
+    
+    """
+    [
+        {
+        "12345": {
+            "id": "12345",
+            "username": "Player1",
+            ...
+        },
+        "67890": {
+            "id": "67890",
+            "username": "Player2",
+            ...
+        }
+    ]
+    """
+    
+    return data
+
+
+@app.post("/set_target_players")
+async def set_target_players(request: Request):
+    """
+    {
+    "ids": ["12345", "67890"]
+    }
+    """
+    
+    data = await request.json()
+    ids = data["ids"]
+    db.set_target_players(ids)
+    return JSONResponse(content={"message": "Target players set successfully"}, status_code=200)
+
+
 @app.get("/latest_lobbies")
 async def get_latest_lobbies():
     data = db.get_latest_lobbies()

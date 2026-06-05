@@ -26,13 +26,21 @@ class DB:
             self.logger.error("Error in init SQL: No SQL connection.")
             return
 
-        self.sql_cursor.execute(
+        self.sql_cursor.executescript(
             """
             CREATE TABLE IF NOT EXISTS lobbies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp INTEGER DEFAULT (strftime('%s', 'now')),
                 data BLOB
-            )
+            );
+            
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT UNIQUE,
+                username TEXT DEFAULT '<unknown>',
+                data TEXT DEFAULT '{}',
+                timestamp INTEGER DEFAULT (strftime('%s', 'now'))
+            );
             """
         )
 
@@ -75,3 +83,76 @@ class DB:
         except Exception as e:
             self.logger.error(f"Error while fetching latest lobbies from DB: {str(e)}", exc_info=True)
             return None
+    
+    
+    def set_target_players(self, ids:list[str]):
+        """
+        Adds new ids and remove ids that are not in the list anymore
+        """
+        
+        try:
+            self.sql_cursor.execute(
+                """
+                DELETE FROM players
+                WHERE player_id NOT IN ({})
+                """.format(",".join("?" for _ in ids)),
+                ids
+            )
+            self.sql_cursor.executemany(
+                """
+                INSERT OR IGNORE INTO players (player_id)
+                VALUES (?)
+                """,
+                [(player_id,) for player_id in ids]
+            )
+            self.sql_connection.commit()
+        except Exception as e:
+            self.logger.error(f"Error while setting target players in DB: {str(e)}", exc_info=True)
+            self.sql_connection.rollback()
+    
+    
+    def get_player_ids(self):
+        try:
+            self.sql_cursor.execute(
+                """
+                SELECT player_id FROM players
+                """
+            )
+            result = self.sql_cursor.fetchall()
+            return [row[0] for row in result]
+        except Exception as e:
+            self.logger.error(f"Error while fetching player ids from DB: {str(e)}", exc_info=True)
+            return []
+    
+    
+    def get_players(self):
+        try:
+            self.sql_cursor.execute(
+                """
+                SELECT player_id, data FROM players
+                """
+            )
+            result = self.sql_cursor.fetchall()
+            return [{row[0]: json.loads(row[1])} for row in result]
+        except Exception as e:
+            self.logger.error(f"Error while fetching players from DB: {str(e)}", exc_info=True)
+            return []
+    
+    
+    def update_players(self, players:list[dict]):
+        try:
+            self.sql_cursor.executemany(
+                """
+                INSERT INTO players (player_id, username, data)
+                VALUES (?, ?, ?)
+                ON CONFLICT(player_id) DO UPDATE SET
+                    username=excluded.username,
+                    data=excluded.data,
+                    timestamp=strftime('%s', 'now')
+                """,
+                [(p["id"], p["username"], json.dumps(p)) for p in players]
+            )
+            self.sql_connection.commit()
+        except Exception as e:
+            self.logger.error(f"Error while updating players in DB: {str(e)}", exc_info=True)
+            self.sql_connection.rollback()

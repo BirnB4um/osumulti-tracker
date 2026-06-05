@@ -64,12 +64,33 @@ class OsuMultiTracker:
             return
         
         self.db.add_lobby(lobbies)
+    
+    
+    def collect_players(self):
+        players = self.db.get_player_ids()
+        if not players:
+            return
         
+        params = {
+            "ids": players,
+            "exclude_bots": None,
+            "ruleset_id": 0,
+        }
+        try:
+            users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
+        except Exception as e:
+            self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
+            return
+        
+        self.db.update_players(users)
+    
 
     def run(self):
         self.logger.info("Starting tracker")
         
         while True:
+            st = time.time()
             self.collect_lobbies()
-            time.sleep(self.collection_interval)
+            self.collect_players()
+            time.sleep(max(0, self.collection_interval - (time.time() - st)))
             
