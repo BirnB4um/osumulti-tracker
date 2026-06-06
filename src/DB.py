@@ -156,3 +156,30 @@ class DB:
         except Exception as e:
             self.logger.error(f"Error while updating players in DB: {str(e)}", exc_info=True)
             self.sql_connection.rollback()
+            
+            
+    def get_last_update_time(self):
+        # get the latest timestamp for both tables individually
+        
+        try:
+            self.sql_cursor.execute(
+                """
+                SELECT MAX(timestamp) FROM lobbies
+                """
+            )
+            lobbies_time = self.sql_cursor.fetchone()[0]
+
+            self.sql_cursor.execute(
+                """
+                SELECT MAX(timestamp) FROM players
+                """
+            )
+            players_time = self.sql_cursor.fetchone()[0]
+
+            return {
+                "last_lobbies_time": lobbies_time,
+                "last_players_time": players_time
+            }
+        except Exception as e:
+            self.logger.error(f"Error while fetching last update time from DB: {str(e)}", exc_info=True)
+            return None

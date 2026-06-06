@@ -136,5 +136,13 @@ async def get_latest_lobbies():
     return data
 
 
+@app.get("/last_update_time")
+async def get_last_update_time():
+    data = db.get_last_update_time()
+    if data is None:
+        return JSONResponse(content={"message": "No data found"}, status_code=404)
+    return data
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)
