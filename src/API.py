@@ -10,13 +10,14 @@ db = DB()
 
 
 """
-country:de,us,fr; public:true; diff:2.1-4.5; player:1-5; limit:10
+country:de,us,fr; public:true; diff:2.1-4.5; playercount:1-5; user:peppy; limit:10
 
 filter = {
     "country": ["de", "us", "fr"],
     "public": True,
     "diff": [2.1, 4.5],
-    "player": [1, 5],
+    "playercount": [1, 5],
+    "user": ["user1", "user2"],
     "limit": 10
 }
 """
@@ -42,9 +43,12 @@ async def filter_latest_lobbies(request: Request):
         elif key == "diff":
             if isinstance(value, list) and len(value) == 2 and all(isinstance(v, (int, float, str)) for v in value):
                 validated_filter["diff"] = [float(v) for v in value]
-        elif key == "player":
+        elif key == "playercount":
             if isinstance(value, list) and len(value) == 2 and all(isinstance(v, (int, float, str)) for v in value):
-                validated_filter["player"] = [int(v) for v in value]
+                validated_filter["playercount"] = [int(v) for v in value]
+        elif key == "user":
+            if isinstance(value, list) and all(isinstance(v, str) for v in value):
+                validated_filter["user"] = value
         elif key == "limit":
             if isinstance(value, int) and value > 0:
                 validated_filter["limit"] = value
@@ -69,9 +73,14 @@ async def filter_latest_lobbies(request: Request):
                 if not (value[0] <= lobby["difficulty_range"]["max"] and value[1] >= lobby["difficulty_range"]["min"]):
                     match = False
                     break
-            elif key == "player":
+            elif key == "playercount":
                 player_count = len(lobby["recent_participants"])
                 if not (value[0] <= player_count <= value[1]):
+                    match = False
+                    break
+            elif key == "user":
+                lobby_players = set([p["username"] for p in lobby["recent_participants"]])
+                if not any([user in lobby_players for user in value]):
                     match = False
                     break
                 
@@ -87,6 +96,14 @@ async def filter_latest_lobbies(request: Request):
     
     data["lobbies"] = filtered_lobbies
 
+    return data
+
+
+@app.get("/latest_lobbies")
+async def get_latest_lobbies():
+    data = db.get_latest_lobbies()
+    if data is None:
+        return JSONResponse(content={"message": "No data found"}, status_code=404)
     return data
 
 
@@ -126,14 +143,6 @@ async def set_target_players(request: Request):
     ids = data["ids"]
     db.set_target_players(ids)
     return JSONResponse(content={"message": "Target players set successfully"}, status_code=200)
-
-
-@app.get("/latest_lobbies")
-async def get_latest_lobbies():
-    data = db.get_latest_lobbies()
-    if data is None:
-        return JSONResponse(content={"message": "No data found"}, status_code=404)
-    return data
 
 
 @app.get("/last_update_time")
