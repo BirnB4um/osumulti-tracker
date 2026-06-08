@@ -91,6 +91,7 @@ class OsuMultiTracker:
         while True:
             st = time.time()
             self.collect_lobbies()
+            time.sleep(30)
             self.collect_players()
             time.sleep(max(0, self.collection_interval - (time.time() - st)))
             
