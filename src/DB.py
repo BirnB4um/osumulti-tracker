@@ -14,8 +14,10 @@ class DB:
 
         self.db_path = os.path.join(data_folder, "lobbies.db")
                 
-        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.sql_connection = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30)
         self.sql_cursor = self.sql_connection.cursor()
+        
+        self.sql_cursor.execute("PRAGMA journal_mode=WAL;")
         
         self._init_sql()
         
