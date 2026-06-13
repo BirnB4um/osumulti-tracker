@@ -1,6 +1,7 @@
 from Logger import get_logger
 from DB import DB
 
+import requests
 import os
 import time
 import traceback
@@ -27,13 +28,16 @@ class OsuMultiTracker:
         self.client_secret = os.environ["CLIENT_SECRET"]
         self.redirect_url = os.environ["REDIRECT_URL"]
         
-        token_dir = os.path.join(self.data_folder, "token")
-        os.makedirs(token_dir, exist_ok=True)
+        self.token_dir = os.path.join(self.data_folder, "token")
+        os.makedirs(self.token_dir, exist_ok=True)
         
-        if not os.listdir(token_dir):
+        if not os.listdir(self.token_dir):
             self.logger.error("No token found. Please copy token file to token/ directory.")
             raise Exception("No token found. Please copy token file to token/ directory.")
         
+        self.connect_api()
+    
+    def connect_api(self):
         try:
             self.api = Ossapi(
                 self.client_id, 
@@ -41,14 +45,12 @@ class OsuMultiTracker:
                 redirect_uri=self.redirect_url, 
                 scopes=[Scope.PUBLIC], 
                 grant=Grant.AUTHORIZATION_CODE,
-                token_directory=token_dir
+                token_directory=self.token_dir
             )
+            self.api._instantiate_type = identity
         except Exception as e:
-            self.logger.error(f"Error initializing Ossapi: {e}", exc_info=True)
-            raise e
+            self.logger.error(f"Error connecting to API: {e}", exc_info=True)
     
-        self.api._instantiate_type = identity
-        
         
     def collect_lobbies(self):
         params = {
@@ -59,6 +61,10 @@ class OsuMultiTracker:
         }
         try:
             lobbies = self.api._request(None, "GET", "/rooms", params=params)
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
+            self.connect_api()
+            return
         except Exception as e:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
             return
@@ -78,6 +84,10 @@ class OsuMultiTracker:
         }
         try:
             users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
+            self.connect_api()
+            return
         except Exception as e:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
             return
