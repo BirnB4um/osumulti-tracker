@@ -61,6 +61,7 @@ class OsuMultiTracker:
         }
         try:
             lobbies = self.api._request(None, "GET", "/rooms", params=params)
+            self.db.add_lobby(lobbies)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
             self.connect_api()
@@ -69,7 +70,6 @@ class OsuMultiTracker:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
             return
         
-        self.db.add_lobby(lobbies)
     
     
     def collect_players(self):
@@ -84,6 +84,7 @@ class OsuMultiTracker:
         }
         try:
             users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
+            self.db.update_players(users)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
             self.connect_api()
@@ -92,16 +93,21 @@ class OsuMultiTracker:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
             return
         
-        self.db.update_players(users)
     
 
     def run(self):
         self.logger.info("Starting tracker")
         
         while True:
-            st = time.time()
-            self.collect_lobbies()
-            time.sleep(30)
-            self.collect_players()
-            time.sleep(max(0, self.collection_interval - (time.time() - st)))
+            try:
+                st = time.time()
+                self.collect_lobbies()
+                time.sleep(30)
+                self.collect_players()
+                time.sleep(max(0, self.collection_interval - (time.time() - st)))
+            except Exception as e:
+                self.logger.error(f"Error in main loop: {e}", exc_info=True)
+                time.sleep(60)
+        
+        self.logger.error("Error: Stopping tracker. This should never happen.")
             
