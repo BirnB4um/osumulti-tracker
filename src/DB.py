@@ -50,6 +50,7 @@ class DB:
         
         
     def add_lobby(self, lobby_data:list[dict]):
+        self.logger.debug(f"Adding lobby data: {len(lobby_data)} lobbies")
         try:
             compressed_data = zlib.compress(json.dumps(lobby_data).encode("utf-8"), level=9)
             self.sql_cursor.execute(
@@ -60,6 +61,7 @@ class DB:
                 (compressed_data,)
             )
             self.sql_connection.commit()
+            self.logger.debug(f"Lobby data added successfully")
         except Exception as e:
             self.logger.error(f"Error while saving results to DB: {str(e)}", exc_info=True)
             self.sql_connection.rollback()
@@ -143,6 +145,7 @@ class DB:
     
     def update_players(self, players:list[dict]):
         try:
+            self.logger.debug(f"Adding player data: {len(players)} players")
             self.sql_cursor.executemany(
                 """
                 INSERT INTO players (player_id, username, data)
@@ -155,6 +158,7 @@ class DB:
                 [(p["id"], p["username"], json.dumps(p)) for p in players]
             )
             self.sql_connection.commit()
+            self.logger.debug(f"Players added successfully")
         except Exception as e:
             self.logger.error(f"Error while updating players in DB: {str(e)}", exc_info=True)
             self.sql_connection.rollback()

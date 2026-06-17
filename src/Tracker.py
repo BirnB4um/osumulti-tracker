@@ -20,9 +20,9 @@ class OsuMultiTracker:
         
         self.data_folder = "/opt/osu_multi/data"
         
-        self.db = DB(data_folder=self.data_folder)
-        
         self.logger = get_logger("Tracker", os.path.join(self.data_folder, "log"))
+        
+        self.db = DB(data_folder=self.data_folder)
         
         self.client_id = os.environ["CLIENT_ID"]
         self.client_secret = os.environ["CLIENT_SECRET"]
@@ -38,6 +38,7 @@ class OsuMultiTracker:
         self.connect_api()
     
     def connect_api(self):
+        self.logger.info("Connecting to API...")
         try:
             self.api = Ossapi(
                 self.client_id, 
@@ -60,7 +61,9 @@ class OsuMultiTracker:
             "type_group": "realtime",
         }
         try:
+            self.logger.debug("Collecting lobbies...")
             lobbies = self.api._request(None, "GET", "/rooms", params=params)
+            self.logger.debug(f"Collected {len(lobbies)} lobbies (raw data size: {len(str(lobbies))} chars)")
             self.db.add_lobby(lobbies)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
@@ -74,6 +77,7 @@ class OsuMultiTracker:
     
     def collect_players(self):
         players = self.db.get_player_ids()
+        self.logger.debug(f"Collecting player data for {len(players)} players...")
         if not players:
             return
         
@@ -84,6 +88,7 @@ class OsuMultiTracker:
         }
         try:
             users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
+            self.logger.debug(f"Collected {len(users)} players. (raw data size: {len(str(users))} chars)")
             self.db.update_players(users)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
