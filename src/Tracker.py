@@ -5,11 +5,21 @@ import requests
 import os
 import time
 import traceback
+import signal
 from ossapi import Ossapi, RoomSearchMode, Scope, Grant, Room
 
 
 def identity(type, value, **args):
     return value
+
+class TimeoutException(BaseException):
+    # needs to be BaseException to not get caught in a try except block from the api
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutException("The operation took too long and was forced to abort.")
+
+signal.signal(signal.SIGALRM, timeout_handler)
 
 
 class OsuMultiTracker:
@@ -17,6 +27,7 @@ class OsuMultiTracker:
     def __init__(self):
         
         self.collection_interval = 60 * 1
+        self.api_reconnect_interval = 60 * 60 * 12 # 12h
         
         self.data_folder = "/opt/osu_multi/data"
         
@@ -55,23 +66,24 @@ class OsuMultiTracker:
         
     def collect_lobbies(self):
         params = {
-            # "limit": 10,
             "mode": "active",
             "sort": "created",
             "type_group": "realtime",
         }
         try:
             self.logger.debug("Collecting lobbies...")
+            signal.alarm(60)
             lobbies = self.api._request(None, "GET", "/rooms", params=params)
+            signal.alarm(0)
             self.logger.debug(f"Collected {len(lobbies)} lobbies (raw data size: {len(str(lobbies))} chars)")
             self.db.add_lobby(lobbies)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
             self.connect_api()
-            return
         except Exception as e:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
-            return
+        finally:
+            signal.alarm(0)
         
     
     
@@ -87,29 +99,45 @@ class OsuMultiTracker:
             "ruleset_id": 0,
         }
         try:
+            signal.alarm(60)
             users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
+            signal.alarm(0)
             self.logger.debug(f"Collected {len(users)} players. (raw data size: {len(str(users))} chars)")
             self.db.update_players(users)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
             self.connect_api()
-            return
         except Exception as e:
             self.logger.error(f"Error occurred in API request: {e}", exc_info=True)
-            return
+        finally:
+            signal.alarm(0)
         
     
 
     def run(self):
         self.logger.info("Starting tracker")
         
+        begin_time = time.time()
+        
         while True:
             try:
+                
+                # reconnect api check
+                if (time.time() - begin_time) > self.api_reconnect_interval:
+                    begin_time = time.time()
+                    self.logger.info("Reconnecting to API. Triggered by interval.")
+                    self.connect_api()
+                    time.sleep(5)
+                
                 st = time.time()
                 self.collect_lobbies()
                 time.sleep(30)
                 self.collect_players()
                 time.sleep(max(0, self.collection_interval - (time.time() - st)))
+            except TimeoutException as e:
+                self.logger.error("Timeout occured through signal.", exc_info=True)
+                self.connect_api()
+                time.sleep(5)
             except Exception as e:
                 self.logger.error(f"Error in main loop: {e}", exc_info=True)
                 time.sleep(60)
