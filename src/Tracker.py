@@ -71,11 +71,9 @@ class OsuMultiTracker:
             "type_group": "realtime",
         }
         try:
-            self.logger.debug("Collecting lobbies...")
             signal.alarm(60)
             lobbies = self.api._request(None, "GET", "/rooms", params=params)
             signal.alarm(0)
-            self.logger.debug(f"Collected {len(lobbies)} lobbies (raw data size: {len(str(lobbies))} chars)")
             self.db.add_lobby(lobbies)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
@@ -89,7 +87,6 @@ class OsuMultiTracker:
     
     def collect_players(self):
         players = self.db.get_player_ids()
-        self.logger.debug(f"Collecting player data for {len(players)} players...")
         if not players:
             return
         
@@ -102,7 +99,6 @@ class OsuMultiTracker:
             signal.alarm(60)
             users = self.api._request(None, "GET", "/users/lookup", params=params)["users"]
             signal.alarm(0)
-            self.logger.debug(f"Collected {len(users)} players. (raw data size: {len(str(users))} chars)")
             self.db.update_players(users)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(f"Connection error occurred in API request: {e}", exc_info=True)
