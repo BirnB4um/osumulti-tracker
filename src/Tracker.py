@@ -28,6 +28,7 @@ class OsuMultiTracker:
         
         self.collection_interval = 60 * 1
         self.api_reconnect_interval = 60 * 60 * 12 # 12h
+        self.last_api_connection_time = 0
         
         self.data_folder = "/opt/osu_multi/data"
         
@@ -60,6 +61,7 @@ class OsuMultiTracker:
                 token_directory=self.token_dir
             )
             self.api._instantiate_type = identity
+            self.last_api_connection_time = time.time()
         except Exception as e:
             self.logger.error(f"Error connecting to API: {e}", exc_info=True)
     
@@ -113,14 +115,11 @@ class OsuMultiTracker:
     def run(self):
         self.logger.info("Starting tracker")
         
-        begin_time = time.time()
-        
         while True:
             try:
                 
                 # reconnect api check
-                if (time.time() - begin_time) > self.api_reconnect_interval:
-                    begin_time = time.time()
+                if (time.time() - self.last_api_connection_time) > self.api_reconnect_interval:
                     self.logger.info("Reconnecting to API. Triggered by interval.")
                     self.connect_api()
                     time.sleep(5)
