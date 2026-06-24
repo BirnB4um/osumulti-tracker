@@ -27,7 +27,7 @@ class OsuMultiTracker:
     def __init__(self):
         
         self.collection_interval = 60 * 1
-        self.api_reconnect_interval = 60 * 60 * 12 # 12h
+        self.api_reconnect_interval = 60 * 60 * 10 # 10h
         self.last_api_connection_time = 0
         
         self.data_folder = "/opt/osu_multi/data"
