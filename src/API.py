@@ -2,11 +2,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import uvicorn
 import time
+import os
 from DB import DB
+from Logger import get_logger
 
 app = FastAPI(root_path="/api/osumulti")
 db = DB()
 
+data_folder = "/opt/osu_multi/data"
+logger = get_logger("API", os.path.join(data_folder, "log"))
 
 
 """
@@ -95,7 +99,7 @@ async def filter_latest_lobbies(request: Request):
         filtered_lobbies = filtered_lobbies[:validated_filter["limit"]]
     
     data["lobbies"] = filtered_lobbies
-
+    logger.debug(f"Filtered lobbies with filter: {validated_filter}. Found {len(filtered_lobbies)} matches.")
     return data
 
 
