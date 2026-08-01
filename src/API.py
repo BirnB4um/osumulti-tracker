@@ -99,7 +99,6 @@ async def filter_latest_lobbies(request: Request):
         filtered_lobbies = filtered_lobbies[:validated_filter["limit"]]
     
     data["lobbies"] = filtered_lobbies
-    logger.debug(f"Filtered lobbies with filter: {validated_filter}. Found {len(filtered_lobbies)} matches.")
     return data
 
 

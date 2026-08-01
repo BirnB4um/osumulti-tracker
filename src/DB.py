@@ -71,7 +71,7 @@ class DB:
             self.sql_cursor.execute(
                 """
                 SELECT timestamp, data FROM lobbies
-                ORDER BY timestamp DESC
+                ORDER BY id DESC
                 LIMIT 1
                 """
             )
