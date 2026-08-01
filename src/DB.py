@@ -67,7 +67,6 @@ class DB:
             
     def get_latest_lobbies(self) -> dict:
         try:
-            self.logger.debug("Fetching latest lobbies from DB...")
             self.sql_cursor.execute(
                 """
                 SELECT timestamp, data FROM lobbies
@@ -76,15 +75,12 @@ class DB:
                 """
             )
             result = self.sql_cursor.fetchone()
-            self.logger.debug(f"Got latest lobbies from DB.")
             if result:
                 timestamp = result[0]
                 compressed_data = result[1]
                 decompressed_data = zlib.decompress(compressed_data).decode("utf-8")
-                self.logger.debug(f"Decompressed latest lobbies data from DB.")
                 return {"timestamp": timestamp, "lobbies": json.loads(decompressed_data)}
             else:
-                self.logger.debug("No latest lobbies found in DB.")
                 return None
         except Exception as e:
             self.logger.error(f"Error while fetching latest lobbies from DB: {str(e)}", exc_info=True)
